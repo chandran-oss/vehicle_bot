@@ -129,13 +129,13 @@ class AgentToolKit:
         self.toolkit.register(
             func=self.list_bikes,
             name="list_bikes",
-            description="List bikes with optional filters, sorting, and pagination. Supports sorting by price, mileage, and engine_displacement. Returns a list of bikes matching the criteria."
+            description="List bikes, scooters, and motorcycles with optional filters, sorting, and pagination. Supports sorting by price, mileage, and engine_displacement. Returns a list of two-wheelers matching the criteria."
         )
         
         self.toolkit.register(
             func=self.search_bike,
             name="search_bike",
-            description="Search for bikes by query string with optional filters. Use when user mentions specific bike names or features."
+            description="Search for bikes, scooters, and motorcycles by query string with optional filters. Use when user mentions specific model names or features."
         )
         
         self.toolkit.register(

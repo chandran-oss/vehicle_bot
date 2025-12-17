@@ -41,11 +41,12 @@ Analyze the user's LAST message and classify their intent:
 8. bike_comparison - Comparing specific bikes/scooters
    Examples: "Compare Activa and Jupiter", "Classic 350 vs Meteor", "Which scooter is better?"
 
-Focus ONLY on the user's most recent message. Consider:
+Focus ONLY on the user's most recent message. CRITICAL RULES:
+- If the message contains "bike", "scooter", "motorcycle", "two-wheeler", or bike brands (Royal Enfield, Mojo, Jawa), it MUST be classified as `bike_recommendation` or `bike_comparison`. NEVER classify these as car intents.
 - Simple greetings should be classified as "greeting"
-- Explicit keywords (e.g., "compare" → car_comparison, "test drive" → book_ride)
-- Question type (e.g., "what documents" → general_qna)
-- Stated requirements (e.g., "under 15 lakhs" → car_recommendation)
+- Explicit keywords (e.g., "compare" → car_comparison OR bike_comparison based on vehicle type)
+- Stated requirements: "under 15 lakhs" → usually car, but "under 2 lakhs" or "under 1 lakh" → check for bike keywords carefully.
+- "Test drive" → book_ride
 
 Provide your classification with confidence (0.0-1.0)."""
 
