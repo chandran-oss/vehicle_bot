@@ -81,6 +81,11 @@ extract-carandbike-cars-test:
 	@echo "Testing CarAndBike extraction with 5 cars..."
 	conda run -n scrape python scripts/extract_carandbike_new_car_data.py --limit 5
 
+# CarAndBike bike data extraction
+extract-carandbike-bikes:
+	@echo "Extracting CarAndBike bike data..."
+	conda run -n scrape python scripts/extract_carandbike_new_bike_data.py
+
 # Consolidate all FAQs
 consolidate:
 	@echo "Consolidating all FAQs..."
