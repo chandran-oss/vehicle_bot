@@ -13,6 +13,7 @@
         "fuel_type": "Petrol"
     },
     "price": {
+        "value": 287000,
         "currency": "INR",
         "availability": "https://schema.org/InStock"
     },
