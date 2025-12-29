@@ -111,7 +111,7 @@ def check_prerequisites() -> tuple[bool, list[str]]:
     
     return len(errors) == 0, errors
 
-
+def initialize_services():
     try:
         data_path = Path("data")
         car_data_path = Path("data/new_car_details")
