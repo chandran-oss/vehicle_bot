@@ -2,7 +2,6 @@
 
 from pydantic import BaseModel
 
-from mahindrabot.models.bike import BikeComparison, BikeDetail
 from mahindrabot.models.car import CarComparison, CarDetail
 from mahindrabot.models.ev_location import EVLocationResult
 
@@ -342,6 +341,17 @@ def serialize_car_detail(car_detail: CarDetail) -> str:
             lines.append(f"Compared with: {', '.join(competitors)}")
             lines.append("")
     
+    # Review Videos (only if available)
+    if car_detail.review_videos:
+        lines.append("🎬 REVIEW VIDEOS")
+        lines.append("-" * 80)
+        for i, video in enumerate(car_detail.review_videos, 1):
+            video_line = f"{i}. [{video.title}]({video.url})"
+            if video.youtube_id:
+                video_line += f" (YouTube: {video.youtube_id})"
+            lines.append(video_line)
+        lines.append("")
+    
     return "\n".join(lines)
 
 
@@ -590,209 +600,5 @@ def serialize_multiple_ev_locations(ev_locations: list[EVLocationResult]) -> str
         # Separator between locations (except last one)
         if i < len(ev_locations):
             lines.append("")
-    
-    return "\n".join(lines)
-
-
-def serialize_bike_detail(bike_detail: BikeDetail) -> str:
-    """
-    Serialize BikeDetail to detailed, human-readable string.
-    """
-    lines = []
-    
-    # Header
-    lines.append("=" * 80)
-    lines.append(f"🏍️ {bike_detail.basic_info.name}")
-    lines.append(f"ID: {bike_detail.id}")
-    lines.append("=" * 80)
-    lines.append("")
-    
-    # Basic Information
-    lines.append("📋 BASIC INFORMATION")
-    lines.append("-" * 80)
-    if bike_detail.basic_info.manufacturer:
-        lines.append(f"Manufacturer: {bike_detail.basic_info.manufacturer}")
-    lines.append(f"Model: {bike_detail.basic_info.model}")
-    if bike_detail.basic_info.body_type:
-        lines.append(f"Body Type: {bike_detail.basic_info.body_type}")
-    if bike_detail.basic_info.image_url:
-        img_ref = _format_image_reference(
-            bike_detail.basic_info.image_url,
-            bike_detail.basic_info.name
-        )
-        lines.append(f"Image: {img_ref}")
-    if bike_detail.basic_info.description:
-        lines.append(f"Description: {bike_detail.basic_info.description}")
-    lines.append("")
-    
-    # Price
-    lines.append("💰 PRICE")
-    lines.append("-" * 80)
-    lines.append(f"Price: {_format_price(bike_detail.price.value)}")
-    lines.append(f"Brand: {bike_detail.brand.name}")
-    if bike_detail.brand.image:
-        brand_logo = _format_image_reference(
-            bike_detail.brand.image,
-            f"{bike_detail.brand.name} Logo"
-        )
-        lines.append(f"Brand Logo: {brand_logo}")
-    lines.append("")
-    
-    # Engine & Performance
-    has_engine_info = (bike_detail.engine or bike_detail.transmission or 
-                       bike_detail.fuel or bike_detail.dimensions)
-    
-    if has_engine_info:
-        lines.append("⚙️  ENGINE & PERFORMANCE")
-        lines.append("-" * 80)
-        
-        # Engine displacement
-        if bike_detail.engine and bike_detail.engine.displacement:
-            disps = [f"{d.value} {d.unit}" for d in bike_detail.engine.displacement]
-            lines.append(f"Engine Displacement: {', '.join(disps)}")
-        
-        # Fuel type
-        fuel_types = _format_fuel_types(bike_detail)
-        if fuel_types:
-            lines.append(f"Fuel Type: {fuel_types}")
-        
-        # Transmission
-        transmission = _format_transmission(bike_detail)
-        if transmission:
-            lines.append(f"Transmission: {transmission}")
-        
-        # Mileage
-        mileage = _format_mileage(bike_detail)
-        if mileage:
-            lines.append(f"Mileage/Efficiency: {mileage}")
-        
-        # Power
-        if bike_detail.engine and bike_detail.engine.power:
-            power_specs = [f"{p.value} {p.unit}" for p in bike_detail.engine.power]
-            lines.append(f"Power: {', '.join(power_specs)}")
-        
-        # Torque
-        if bike_detail.engine and bike_detail.engine.torque:
-            torque_specs = [f"{t.value} {t.unit}" for t in bike_detail.engine.torque]
-            lines.append(f"Torque: {', '.join(torque_specs)}")
-        
-        lines.append("")
-    
-    # Dimensions
-    if bike_detail.dimensions:
-        lines.append("📏 DIMENSIONS")
-        lines.append("-" * 80)
-        
-        if bike_detail.dimensions.seat_height:
-             lines.append(f"Seat Height: {bike_detail.dimensions.seat_height.value} {bike_detail.dimensions.seat_height.unit}")
-
-        if bike_detail.dimensions.ground_clearance:
-             lines.append(f"Ground Clearance: {bike_detail.dimensions.ground_clearance.value} {bike_detail.dimensions.ground_clearance.unit}")
-
-        if bike_detail.dimensions.weight:
-            if "kerb_weight" in bike_detail.dimensions.weight:
-                lines.append(f"Kerb Weight: {bike_detail.dimensions.weight['kerb_weight']} kg")
-        
-        lines.append("")
-    
-    # Colors
-    if bike_detail.colors:
-        lines.append(f"🎨 AVAILABLE COLORS ({len(bike_detail.colors)})")
-        lines.append("-" * 80)
-        for i, color in enumerate(bike_detail.colors, 1):
-            lines.append(f"{i}. {color}")
-        lines.append("")
-    
-    # Rating & Review
-    if bike_detail.rating or bike_detail.reviewed_by or bike_detail.pros or bike_detail.cons:
-        lines.append("⭐ RATING & REVIEW")
-        lines.append("-" * 80)
-        
-        rating = _format_rating(bike_detail)
-        if rating:
-            lines.append(f"Expert Rating: {rating}")
-        
-        if bike_detail.reviewed_by:
-            lines.append(f"Reviewed By: {bike_detail.reviewed_by.name}")
-            if bike_detail.reviewed_by.job_title:
-                lines.append(f"Position: {bike_detail.reviewed_by.job_title}")
-        
-        if bike_detail.pros:
-            lines.append(f"\n✅ Pros:")
-            for pro in bike_detail.pros:
-                lines.append(f"  • {pro}")
-        
-        if bike_detail.cons:
-            lines.append(f"\n❌ Cons:")
-            for con in bike_detail.cons:
-                lines.append(f"  • {con}")
-        
-        lines.append("")
-        
-    # Verdict
-    if bike_detail.verdict:
-        lines.append("📝 EXPERT VERDICT")
-        lines.append("-" * 80)
-        lines.append(bike_detail.verdict)
-        lines.append("")
-    
-    return "\n".join(lines)
-
-
-def serialize_bike_comparison(bike_comparison: BikeComparison) -> str:
-    """
-    Serialize BikeComparison to compact table format.
-    """
-    lines = []
-    
-    # Header
-    bike_names = [bike.basic_info.name for bike in bike_comparison.bikes]
-    header = f"COMPARISON: {' vs '.join(bike_names)}"
-    lines.append(header)
-    lines.append("─" * len(header))
-    
-    # Table header
-    table_header = ["Feature"]
-    for i in range(len(bike_comparison.bikes)):
-        table_header.append(f"Bike {i+1}")
-    
-    col_widths = [20]
-    for _ in bike_comparison.bikes:
-        col_widths.append(15)
-    
-    header_row = " | ".join([
-        name.ljust(width) 
-        for name, width in zip(table_header, col_widths)
-    ])
-    lines.append(header_row)
-    lines.append("─" * len(header_row))
-    
-    # Data rows
-    for feature, values in bike_comparison.comparison_matrix.items():
-        row_parts = [feature.ljust(col_widths[0])]
-        
-        for i, value in enumerate(values):
-            if isinstance(value, int):
-                if feature == "Price (INR)":
-                    formatted = _format_price(value)
-                else:
-                    formatted = str(value)
-            else:
-                formatted = str(value)
-            
-            row_parts.append(formatted.ljust(col_widths[i + 1]))
-        
-        lines.append(" | ".join(row_parts))
-    
-    # Images
-    lines.append("")
-    lines.append("Images:")
-    for i, bike in enumerate(bike_comparison.bikes):
-        if bike.basic_info.image_url:
-            img_ref = _format_image_reference(
-                bike.basic_info.image_url,
-                bike.basic_info.name
-            )
-            lines.append(f"  Bike {i+1}: {img_ref}")
     
     return "\n".join(lines)
