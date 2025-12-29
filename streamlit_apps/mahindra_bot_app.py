@@ -26,7 +26,6 @@ from langfuse import observe
 from mahindrabot.core import AgentToolKit, run_mahindra_bot
 from mahindrabot.core.intents import classify_intent
 from mahindrabot.core.models import Intent
-from mahindrabot.services.bike_service import BikeService
 from mahindrabot.services.car_service import CarService
 from mahindrabot.services.ev_charger_service import EVChargerLocationService
 from mahindrabot.services.faq_service import FAQService
@@ -115,17 +114,15 @@ def check_prerequisites() -> tuple[bool, list[str]]:
 def initialize_services():
     """Initialize car, FAQ, and EV charger services."""
     try:
-        car_data_path = Path("data/new_car_details")
-        bike_data_path = Path("data/new_bike_details")
+        data_path = Path("data")
         faq_data_path = Path("data/consolidated_faqs.json")
         ev_locations_path = Path("data/ev-locations.json")
         
-        car_service = CarService(str(car_data_path))
-        bike_service = BikeService(str(bike_data_path))
+        car_service = CarService(str(data_path))
         faq_service = FAQService(str(faq_data_path))
         ev_charger_service = EVChargerLocationService(str(ev_locations_path))
         
-        return car_service, bike_service, faq_service, ev_charger_service, None
+        return car_service, faq_service, ev_charger_service, None
     except Exception as e:
         return None, None, None, str(e)
 
@@ -149,8 +146,6 @@ def render_ai_response(response: AgentResponse, intent: Intent | None = None):
             "general_qna": "🤔",
             "car_recommendation": "🚗",
             "car_comparison": "⚖️",
-            "bike_recommendation": "🏍️",
-            "bike_comparison": "🔄",
             "book_ride": "📅",
             "find_ev_charger_location": "🔌"
         }
@@ -205,7 +200,32 @@ def render_ai_response(response: AgentResponse, intent: Intent | None = None):
     # Display final message
     if response.final_message:
         if response.final_message.content:
-            st.markdown(response.final_message.content)
+            # Process content to find YouTube links and display them nicely
+            content = response.final_message.content
+            st.markdown(content)
+            
+            # Extract and embed YouTube videos
+            import re
+            yt_patterns = [
+                r'https?://(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
+                r'https?://youtu\.be/([a-zA-Z0-9_-]{11})',
+                r'\(YouTube: ([a-zA-Z0-9_-]{11})\)'
+            ]
+            
+            found_yt_ids = []
+            for pattern in yt_patterns:
+                matches = re.findall(pattern, content)
+                for match in matches:
+                    if match not in found_yt_ids:
+                        found_yt_ids.append(match)
+            
+            if found_yt_ids:
+                st.markdown("---")
+                st.markdown("### 🎥 Watch Review Videos")
+                cols = st.columns(len(found_yt_ids[:2])) # Limit to 2 videos
+                for i, yt_id in enumerate(found_yt_ids[:2]):
+                    with cols[i]:
+                        st.video(f"https://www.youtube.com/watch?v={yt_id}")
 
 
 def render_conversation_history():
@@ -327,12 +347,6 @@ def render_sidebar():
         
         - ⚖️ **Car Comparison**  
           Comparing multiple cars
-
-        - 🏍️ **Bike Recommendation**  
-          Finding the right bike/scooter
-        
-        - 🔄 **Bike Comparison**  
-          Comparing multiple bikes/scooters
         
         - 📅 **Book Test Drive**  
           Schedule a test drive
@@ -365,8 +379,6 @@ def render_sidebar():
                 "general_qna": "🤔",
                 "car_recommendation": "🚗",
                 "car_comparison": "⚖️",
-                "bike_recommendation": "🏍️",
-                "bike_comparison": "🔄",
                 "book_ride": "📅",
                 "find_ev_charger_location": "🔌"
             }
@@ -475,7 +487,7 @@ def main():
     if "services_initialized" not in st.session_state:
         # Initialize services
         with st.spinner("Initializing services..."):
-            car_service, bike_service, faq_service, ev_charger_service, error = initialize_services()
+            car_service, faq_service, ev_charger_service, error = initialize_services()
             
             if error:
                 st.error(f"Failed to initialize services: {error}")
@@ -485,7 +497,6 @@ def main():
             # Create toolkit
             st.session_state.agent_toolkit = AgentToolKit(
                 car_service=car_service,
-                bike_service=bike_service,
                 faq_service=faq_service,
                 ev_charger_service=ev_charger_service
             )
@@ -545,11 +556,7 @@ def main():
             st.markdown("- I want a car under 15 lakhs")
             st.markdown("- Compare Mahindra Thar and Scorpio")
             st.markdown("- Book a test drive for XUV700")
-            st.markdown("")
-            st.markdown("**🏍️ Bike Queries**")
-            st.markdown("- Show me scooters under 1 lakh")
-            st.markdown("- Compare Royal Enfield Classic and Meteor")
-            st.markdown("- Best mileage bike")
+            st.markdown("- Show me SUVs with good mileage")
             st.markdown("")
             st.markdown("**🔌 EV Charging**")
             st.markdown("- Find EV charging station near 110092")
