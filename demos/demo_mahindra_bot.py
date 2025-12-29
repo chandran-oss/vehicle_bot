@@ -24,6 +24,8 @@ from dotenv import load_dotenv
 
 from mahindrabot.core import AgentToolKit, run_mahindra_bot
 from mahindrabot.services.car_service import CarService
+from mahindrabot.services.bike_service import BikeService
+from mahindrabot.services.ev_charger_service import EVChargerLocationService
 from mahindrabot.services.faq_service import FAQService
 from mahindrabot.services.llm_service import LLMConfig, ModelArgs
 
@@ -205,7 +207,9 @@ def main():
     
     # Check for required data
     car_data_path = Path("data/new_car_details")
+    bike_data_path = Path("data/new_bike_details")
     faq_data_path = Path("data/consolidated_faqs.json")
+    ev_locations_path = Path("data/ev-locations.json")
     
     if not car_data_path.exists():
         print(f"\n❌ Error: Car data not found at {car_data_path}")
@@ -223,16 +227,25 @@ def main():
     print("\n📦 Initializing services...")
     try:
         car_service = CarService(str(car_data_path))
+        bike_service = BikeService(str(bike_data_path))
         faq_service = FAQService(str(faq_data_path))
+        ev_charger_service = EVChargerLocationService(str(ev_locations_path))
         print("   ✓ Car service loaded")
+        print("   ✓ Bike service loaded")
         print("   ✓ FAQ service loaded")
+        print("   ✓ EV charger service loaded")
     except Exception as e:
         print(f"\n❌ Error initializing services: {e}\n")
         return
     
     # Create toolkit
     print("\n🔧 Creating AgentToolKit...")
-    toolkit = AgentToolKit(car_service=car_service, faq_service=faq_service)
+    toolkit = AgentToolKit(
+        car_service=car_service,
+        bike_service=bike_service,
+        faq_service=faq_service,
+        ev_charger_service=ev_charger_service
+    )
     print(f"   ✓ Registered {len(toolkit.get_tools())} tools")
     
     # Configure LLM

@@ -125,7 +125,12 @@ def run_mahindra_bot(
         
     Example:
         >>> from mahindrabot.core.intents import classify_intent
-        >>> toolkit = AgentToolKit(car_service, faq_service)
+        >>> toolkit = AgentToolKit(
+        ...     car_service=car_service,
+        ...     bike_service=bike_service,
+        ...     faq_service=faq_service,
+        ...     ev_charger_service=ev_charger_service
+        ... )
         >>> config = LLMConfig(model_id="gpt-4o-mini")
         >>> messages = []
         >>> 

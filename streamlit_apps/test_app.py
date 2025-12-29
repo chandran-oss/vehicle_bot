@@ -33,6 +33,8 @@ try:
 
     from mahindrabot.core import AgentToolKit, run_mahindra_bot
     from mahindrabot.services.car_service import CarService
+    from mahindrabot.services.bike_service import BikeService
+    from mahindrabot.services.ev_charger_service import EVChargerLocationService
     from mahindrabot.services.faq_service import FAQService
     from mahindrabot.services.llm_service import LLMConfig, ModelArgs
     from mahindrabot.services.llm_service.agent import AgentResponse
@@ -53,13 +55,17 @@ car_data_path = Path("data/new_car_details")
 car_data_exists = car_data_path.exists()
 print(f"  {'✅' if car_data_exists else '❌'} Car data directory: {car_data_path}")
 
-if car_data_exists:
-    car_files = list(car_data_path.glob("*.json"))
-    print(f"    → Found {len(car_files)} car JSON files")
+bike_data_path = Path("data/new_bike_details")
+bike_data_exists = bike_data_path.exists()
+print(f"  {'✅' if bike_data_exists else '❌'} Bike data directory: {bike_data_path}")
 
 faq_data_path = Path("data/consolidated_faqs.json")
 faq_data_exists = faq_data_path.exists()
 print(f"  {'✅' if faq_data_exists else '❌'} FAQ data file: {faq_data_path}")
+
+ev_locations_path = Path("data/ev-locations.json")
+ev_locations_exists = ev_locations_path.exists()
+print(f"  {'✅' if ev_locations_exists else '❌'} EV locations file: {ev_locations_path}")
 
 all_prereqs = api_key_set and car_data_exists and faq_data_exists
 if not all_prereqs:
@@ -76,11 +82,22 @@ if car_data_exists and faq_data_exists:
         car_service = CarService(str(car_data_path))
         print("  ✅ CarService initialized")
         
+        bike_service = BikeService(str(bike_data_path))
+        print("  ✅ BikeService initialized")
+        
         faq_service = FAQService(str(faq_data_path))
         print("  ✅ FAQService initialized")
         
+        ev_charger_service = EVChargerLocationService(str(ev_locations_path))
+        print("  ✅ EVChargerLocationService initialized")
+        
         # Create toolkit
-        toolkit = AgentToolKit(car_service=car_service, faq_service=faq_service)
+        toolkit = AgentToolKit(
+            car_service=car_service,
+            bike_service=bike_service,
+            faq_service=faq_service,
+            ev_charger_service=ev_charger_service
+        )
         num_tools = len(toolkit.get_tools())
         print(f"  ✅ AgentToolKit created with {num_tools} tools")
         
