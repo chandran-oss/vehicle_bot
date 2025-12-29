@@ -3,6 +3,7 @@
 from pydantic import BaseModel
 
 from mahindrabot.models.car import CarComparison, CarDetail
+from mahindrabot.models.bike import BikeComparison, BikeDetail
 from mahindrabot.models.ev_location import EVLocationResult
 
 
@@ -43,7 +44,7 @@ def _format_price(price_value: int) -> str:
         return f"₹{price_value}"
 
 
-def _format_displacement(car: CarDetail) -> str:
+def _format_displacement(vehicle) -> str:
     """
     Format engine displacement.
     
@@ -53,19 +54,19 @@ def _format_displacement(car: CarDetail) -> str:
     Returns:
         Formatted displacement string
     """
-    if not car.engine or not car.engine.displacement:
+    if not vehicle.engine or not vehicle.engine.displacement:
         return "N/A"
     
-    if len(car.engine.displacement) == 1:
-        disp = car.engine.displacement[0]
+    if len(vehicle.engine.displacement) == 1:
+        disp = vehicle.engine.displacement[0]
         return f"{disp.value}{disp.unit}"
     else:
         # Multiple displacements
-        disps = [f"{d.value}{d.unit}" for d in car.engine.displacement]
+        disps = [f"{d.value}{d.unit}" for d in vehicle.engine.displacement]
         return "/".join(disps)
 
 
-def _format_fuel_types(car: CarDetail) -> str | None:
+def _format_fuel_types(vehicle) -> str | None:
     """
     Format fuel types.
     
@@ -77,10 +78,10 @@ def _format_fuel_types(car: CarDetail) -> str | None:
     """
     fuel_types = []
     
-    if car.fuel and car.fuel.type:
-        fuel_types.extend(car.fuel.type)
-    elif car.engine and car.engine.fuel_type:
-        fuel_types.extend(car.engine.fuel_type)
+    if vehicle.fuel and vehicle.fuel.type:
+        fuel_types.extend(vehicle.fuel.type)
+    elif vehicle.engine and vehicle.engine.fuel_type:
+        fuel_types.extend(vehicle.engine.fuel_type)
     
     if not fuel_types:
         return None
@@ -88,7 +89,7 @@ def _format_fuel_types(car: CarDetail) -> str | None:
     return ", ".join(fuel_types)
 
 
-def _format_transmission(car: CarDetail) -> str | None:
+def _format_transmission(vehicle) -> str | None:
     """
     Format transmission types.
     
@@ -98,13 +99,13 @@ def _format_transmission(car: CarDetail) -> str | None:
     Returns:
         Formatted transmission string or None if not available
     """
-    if not car.transmission:
+    if not vehicle.transmission:
         return None
     
-    return ", ".join(car.transmission)
+    return ", ".join(vehicle.transmission)
 
 
-def _format_mileage(car: CarDetail) -> str | None:
+def _format_mileage(vehicle) -> str | None:
     """
     Format mileage/efficiency.
     
@@ -114,10 +115,10 @@ def _format_mileage(car: CarDetail) -> str | None:
     Returns:
         Formatted mileage string with units or None if not available
     """
-    if not car.fuel or not car.fuel.efficiency:
+    if not vehicle.fuel or not vehicle.fuel.efficiency:
         return None
     
-    eff = car.fuel.efficiency
+    eff = vehicle.fuel.efficiency
     eff_type = eff.get("type", "fuel")
     
     if "value" in eff:
@@ -137,7 +138,7 @@ def _format_mileage(car: CarDetail) -> str | None:
     return None
 
 
-def _format_rating(car: CarDetail) -> str | None:
+def _format_rating(vehicle) -> str | None:
     """
     Format rating.
     
@@ -147,8 +148,8 @@ def _format_rating(car: CarDetail) -> str | None:
     Returns:
         Formatted rating string or None if not available
     """
-    if car.rating and car.rating.value is not None:
-        return f"{car.rating.value}/10"
+    if vehicle.rating and vehicle.rating.value is not None:
+        return f"{vehicle.rating.value}/10"
     return None
 
 
@@ -600,5 +601,259 @@ def serialize_multiple_ev_locations(ev_locations: list[EVLocationResult]) -> str
         # Separator between locations (except last one)
         if i < len(ev_locations):
             lines.append("")
+    
+    return "\n".join(lines)
+
+
+def serialize_bike_detail(bike_detail: BikeDetail) -> str:
+    """
+    Serialize BikeDetail to detailed, human-readable string.
+    
+    Shows all available information in a clear, organized format.
+    
+    Args:
+        bike_detail: BikeDetail object to serialize
+        
+    Returns:
+        Human-readable string representation with all details
+    """
+    lines = []
+    
+    # Header with bike name
+    lines.append("=" * 80)
+    lines.append(f"🏍️ {bike_detail.basic_info.name}")
+    lines.append(f"ID: {bike_detail.id}")
+    lines.append("=" * 80)
+    lines.append("")
+    
+    # Basic Information
+    lines.append("📋 BASIC INFORMATION")
+    lines.append("-" * 80)
+    if bike_detail.basic_info.manufacturer:
+        lines.append(f"Manufacturer: {bike_detail.basic_info.manufacturer}")
+    lines.append(f"Model: {bike_detail.basic_info.model}")
+    if bike_detail.basic_info.body_type:
+        lines.append(f"Body Type: {bike_detail.basic_info.body_type}")
+    if bike_detail.basic_info.image_url:
+        img_ref = _format_image_reference(
+            bike_detail.basic_info.image_url,
+            bike_detail.basic_info.name
+        )
+        lines.append(f"Image: {img_ref}")
+    if bike_detail.basic_info.description:
+        lines.append(f"Description: {bike_detail.basic_info.description}")
+    lines.append("")
+    
+    # Price
+    lines.append("💰 PRICE")
+    lines.append("-" * 80)
+    lines.append(f"Price: {_format_price(bike_detail.price.value)}")
+    lines.append(f"Brand: {bike_detail.brand.name}")
+    if bike_detail.brand.image:
+        brand_logo = _format_image_reference(
+            bike_detail.brand.image,
+            f"{bike_detail.brand.name} Logo"
+        )
+        lines.append(f"Brand Logo: {brand_logo}")
+    lines.append("")
+    
+    # Engine & Performance (only if available)
+    has_engine_info = (bike_detail.engine or bike_detail.transmission or 
+                       bike_detail.fuel or bike_detail.dimensions)
+    
+    if has_engine_info:
+        lines.append("⚙️  ENGINE & PERFORMANCE")
+        lines.append("-" * 80)
+        
+        # Engine displacement
+        if bike_detail.engine and bike_detail.engine.displacement:
+            disps = [f"{d.value} {d.unit}" for d in bike_detail.engine.displacement]
+            lines.append(f"Engine Displacement: {', '.join(disps)}")
+        
+        # Fuel type
+        fuel_types = _format_fuel_types(bike_detail)
+        if fuel_types:
+            lines.append(f"Fuel Type: {fuel_types}")
+        
+        # Transmission
+        transmission = _format_transmission(bike_detail)
+        if transmission:
+            lines.append(f"Transmission: {transmission}")
+        
+        # Mileage/Efficiency
+        mileage = _format_mileage(bike_detail)
+        if mileage:
+            lines.append(f"Mileage/Efficiency: {mileage}")
+        
+        # Power (if available)
+        if bike_detail.engine and bike_detail.engine.power:
+            power_specs = [f"{p.value} {p.unit}" for p in bike_detail.engine.power]
+            lines.append(f"Power: {', '.join(power_specs)}")
+        
+        # Torque (if available)
+        if bike_detail.engine and bike_detail.engine.torque:
+            torque_specs = [f"{t.value} {t.unit}" for t in bike_detail.engine.torque]
+            lines.append(f"Torque: {', '.join(torque_specs)}")
+        
+        lines.append("")
+    
+    # Dimensions (only if available)
+    if bike_detail.dimensions:
+        lines.append("📏 DIMENSIONS")
+        lines.append("-" * 80)
+        
+        if bike_detail.dimensions.seat_height:
+            lines.append(f"Seat Height: {bike_detail.dimensions.seat_height.value} {bike_detail.dimensions.seat_height.unit}")
+            
+        if bike_detail.dimensions.ground_clearance:
+            lines.append(f"Ground Clearance: {bike_detail.dimensions.ground_clearance.value} {bike_detail.dimensions.ground_clearance.unit}")
+        
+        if bike_detail.dimensions.width:
+            lines.append(f"Width: {bike_detail.dimensions.width.value} {bike_detail.dimensions.width.unit}")
+        
+        if bike_detail.dimensions.height:
+            lines.append(f"Height: {bike_detail.dimensions.height.value} {bike_detail.dimensions.height.unit}")
+        
+        if bike_detail.dimensions.weight:
+            if "kerb_weight" in bike_detail.dimensions.weight:
+                lines.append(f"Kerb Weight: {bike_detail.dimensions.weight['kerb_weight']} kg")
+        
+        lines.append("")
+    
+    # Features (only if available)
+    if bike_detail.features:
+        lines.append(f"🛠️  FEATURES")
+        lines.append("-" * 80)
+        for i, feature in enumerate(bike_detail.features, 1):
+            lines.append(f"{i}. {feature}")
+        lines.append("")
+
+    # Colors (only if available)
+    if bike_detail.colors:
+        lines.append(f"🎨 AVAILABLE COLORS ({len(bike_detail.colors)})")
+        lines.append("-" * 80)
+        for i, color in enumerate(bike_detail.colors, 1):
+            lines.append(f"{i}. {color}")
+        lines.append("")
+    
+    # Rating & Review (only if available)
+    if bike_detail.rating or bike_detail.reviewed_by or bike_detail.pros or bike_detail.cons:
+        lines.append("⭐ RATING & REVIEW")
+        lines.append("-" * 80)
+        
+        rating = _format_rating(bike_detail)
+        if rating:
+            lines.append(f"Expert Rating: {rating}")
+        
+        if bike_detail.reviewed_by:
+            lines.append(f"Reviewed By: {bike_detail.reviewed_by.name}")
+            if bike_detail.reviewed_by.job_title:
+                lines.append(f"Position: {bike_detail.reviewed_by.job_title}")
+        
+        if bike_detail.pros:
+            lines.append(f"\n✅ Pros:")
+            for pro in bike_detail.pros:
+                lines.append(f"  • {pro}")
+        
+        if bike_detail.cons:
+            lines.append(f"\n❌ Cons:")
+            for con in bike_detail.cons:
+                lines.append(f"  • {con}")
+        
+        lines.append("")
+    
+    # Verdict (only if available)
+    if bike_detail.verdict:
+        lines.append("📝 EXPERT VERDICT")
+        lines.append("-" * 80)
+        lines.append(bike_detail.verdict)
+        lines.append("")
+    
+    # What's New (only if available)
+    if bike_detail.whats_new:
+        lines.append(f"🆕 WHAT'S NEW")
+        lines.append("-" * 80)
+        for section_name, points in bike_detail.whats_new.items():
+            lines.append(f"\n{section_name}:")
+            for point in points:
+                lines.append(f"  • {point}")
+        lines.append("")
+    
+    # Competitor Comparison (only if available)
+    if bike_detail.competitor_comparison:
+        competitors = [b.name for b in bike_detail.competitor_comparison.bikes if b.name != bike_detail.basic_info.name]
+        if competitors:
+            lines.append(f"🔄 COMPETITOR COMPARISON")
+            lines.append("-" * 80)
+            lines.append(f"Compared with: {', '.join(competitors)}")
+            lines.append("")
+    
+    return "\n".join(lines)
+
+
+def serialize_bike_comparison(bike_comparison: BikeComparison) -> str:
+    """
+    Serialize BikeComparison to compact table format.
+    
+    Args:
+        bike_comparison: BikeComparison object to serialize
+        
+    Returns:
+        Compact table string
+    """
+    lines = []
+    
+    # Header with bike names
+    bike_names = [bike.basic_info.name for bike in bike_comparison.bikes]
+    header = f"COMPARISON: {' vs '.join(bike_names)}"
+    lines.append(header)
+    lines.append("─" * len(header))
+    
+    # Table header
+    table_header = ["Feature"]
+    for i in range(len(bike_comparison.bikes)):
+        table_header.append(f"Bike {i+1}")
+    
+    # Determine column widths
+    col_widths = [20]  # Feature column
+    for _ in bike_comparison.bikes:
+        col_widths.append(15)  # Bike columns
+    
+    # Format header row
+    header_row = " | ".join([
+        name.ljust(width) 
+        for name, width in zip(table_header, col_widths)
+    ])
+    lines.append(header_row)
+    lines.append("─" * len(header_row))
+    
+    # Format data rows
+    for feature, values in bike_comparison.comparison_matrix.items():
+        row_parts = [feature.ljust(col_widths[0])]
+        
+        for i, value in enumerate(values):
+            # Format value based on type
+            if isinstance(value, int):
+                if feature == "Price (INR)":
+                    formatted = _format_price(value)
+                else:
+                    formatted = str(value)
+            else:
+                formatted = str(value)
+            
+            row_parts.append(formatted.ljust(col_widths[i + 1]))
+        
+        lines.append(" | ".join(row_parts))
+    
+    # Add image references at the bottom
+    lines.append("")
+    lines.append("Images:")
+    for i, bike in enumerate(bike_comparison.bikes):
+        if bike.basic_info.image_url:
+            img_ref = _format_image_reference(
+                bike.basic_info.image_url,
+                bike.basic_info.name
+            )
+            lines.append(f"  Bike {i+1}: {img_ref}")
     
     return "\n".join(lines)
