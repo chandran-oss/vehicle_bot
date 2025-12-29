@@ -5,6 +5,14 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ReviewVideo(BaseModel):
+    """Review video information."""
+    title: str
+    url: str
+    youtube_id: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+
+
 class ImageReference(BaseModel):
     """Reference to an image with unique identifier."""
     url: str
@@ -65,8 +73,6 @@ class Dimensions(BaseModel):
     width: Optional[DimensionValue] = None
     height: Optional[DimensionValue] = None
     weight: Optional[dict[str, int]] = None
-    boot_space: Optional[DimensionValue] = None
-    ground_clearance: Optional[DimensionValue] = None
     seating_capacity: int
     number_of_doors: Optional[int] = None
 
@@ -151,7 +157,7 @@ class CarDetail(BaseModel):
     competitor_comparison: Optional[CompetitorComparison] = None
     mileage_details: Optional[list[MileageDetail]] = None
     whats_new: Optional[dict[str, list[str]]] = None
-    features: Optional[list[str]] = None
+    review_videos: Optional[list[ReviewVideo]] = None
     
     model_config = ConfigDict(validate_assignment=True, extra="ignore")
     
