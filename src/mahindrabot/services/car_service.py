@@ -56,20 +56,22 @@ class CarService:
     
     def _load_cars(self, json_folder: str) -> None:
         """
-        Load all car JSON files from folder.
+        Load all car/bike JSON files from folder recursively.
         
         Args:
-            json_folder: Path to folder containing car JSON files
+            json_folder: Path to folder containing JSON files
         """
         folder_path = Path(json_folder)
         
         if not folder_path.exists():
-            raise ValueError(f"JSON folder not found: {json_folder}")
+            raise ValueError(f"Data folder not found: {json_folder}")
         
-        json_files = list(folder_path.glob("*.json"))
+        # Load JSON files recursively to support cars/ bikes/ etc.
+        json_files = list(folder_path.rglob("*.json"))
         
         if not json_files:
-            raise ValueError(f"No JSON files found in: {json_folder}")
+            print(f"Warning: No JSON files found in: {json_folder}")
+            return
         
         for json_file in json_files:
             # Generate car_id from filename (lowercase with underscores)
@@ -78,6 +80,10 @@ class CarService:
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     raw_data = json.load(f)
+                
+                # Only load if it looks like vehicle data (has basic_info and price)
+                if "basic_info" not in raw_data or "price" not in raw_data:
+                    continue
                 
                 # Preprocess the data
                 preprocessed = preprocess_car_data(raw_data, car_id)
