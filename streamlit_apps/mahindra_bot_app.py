@@ -27,6 +27,7 @@ from mahindrabot.core import AgentToolKit, run_mahindra_bot
 from mahindrabot.core.intents import classify_intent
 from mahindrabot.core.models import Intent
 from mahindrabot.services.car_service import CarService
+from mahindrabot.services.bike_service import BikeService
 from mahindrabot.services.ev_charger_service import EVChargerLocationService
 from mahindrabot.services.faq_service import FAQService
 from mahindrabot.services.llm_service import LLMConfig, ModelArgs, UserMessage
@@ -111,20 +112,21 @@ def check_prerequisites() -> tuple[bool, list[str]]:
     return len(errors) == 0, errors
 
 
-def initialize_services():
-    """Initialize car, FAQ, and EV charger services."""
     try:
         data_path = Path("data")
+        car_data_path = Path("data/new_car_details")
+        bike_data_path = Path("data/new_bike_details")
         faq_data_path = Path("data/consolidated_faqs.json")
         ev_locations_path = Path("data/ev-locations.json")
         
         car_service = CarService(str(data_path))
+        bike_service = BikeService(str(bike_data_path))
         faq_service = FAQService(str(faq_data_path))
         ev_charger_service = EVChargerLocationService(str(ev_locations_path))
         
-        return car_service, faq_service, ev_charger_service, None
+        return car_service, bike_service, faq_service, ev_charger_service, None
     except Exception as e:
-        return None, None, None, str(e)
+        return None, None, None, None, str(e)
 
 
 # ============================================================================
@@ -487,7 +489,7 @@ def main():
     if "services_initialized" not in st.session_state:
         # Initialize services
         with st.spinner("Initializing services..."):
-            car_service, faq_service, ev_charger_service, error = initialize_services()
+            car_service, bike_service, faq_service, ev_charger_service, error = initialize_services()
             
             if error:
                 st.error(f"Failed to initialize services: {error}")
@@ -497,6 +499,7 @@ def main():
             # Create toolkit
             st.session_state.agent_toolkit = AgentToolKit(
                 car_service=car_service,
+                bike_service=bike_service,
                 faq_service=faq_service,
                 ev_charger_service=ev_charger_service
             )
