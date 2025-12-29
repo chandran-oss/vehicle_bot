@@ -377,6 +377,42 @@ def extract_detailed_car_info(soup):
                         'features': comparison_rows
                     }
     
+    # ========== REVIEW VIDEOS ==========
+    review_videos = []
+    videos_section = soup.find('div', id='videos')
+    if videos_section:
+        video_links = videos_section.find_all('a', class_='js-tracker')
+        for link in video_links:
+            href = link.get('href', '')
+            if '/videos/' in href:
+                video_title = link.get('title', '') or link.get_text(strip=True)
+                
+                # Full URL
+                full_url = href
+                if not href.startswith('http'):
+                    full_url = f"https://www.carandbike.com{href}"
+                
+                video_info = {
+                    'title': video_title,
+                    'url': full_url
+                }
+                
+                # Try to extract YouTube ID from thumbnail
+                img_tag = link.find('img')
+                if img_tag:
+                    img_src = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('srcset', '')
+                    video_info['thumbnail_url'] = img_src
+                    
+                    # Pattern match for YouTube ID: .../vi/[VIDEO_ID]/...
+                    yt_match = re.search(r'/vi/([^/]+)/', img_src)
+                    if yt_match:
+                        video_info['youtube_id'] = yt_match.group(1)
+                
+                review_videos.append(video_info)
+    
+    if review_videos:
+        car_details['review_videos'] = review_videos
+    
     return car_details
 
 
