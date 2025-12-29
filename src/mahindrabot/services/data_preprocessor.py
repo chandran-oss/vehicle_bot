@@ -1,10 +1,10 @@
 """Data preprocessing functions for cleaning and normalizing car data from JSON files."""
 
 import re
-from typing import Any, Optional
+from typing import Any
 
 
-def parse_price(value: Any) -> Optional[int]:
+def parse_price(value: Any) -> int | None:
     """
     Convert price value to integer.
     
@@ -37,7 +37,7 @@ def parse_price(value: Any) -> Optional[int]:
     return None
 
 
-def parse_engine_displacement(value: Optional[str]) -> list[dict[str, Any]]:
+def parse_engine_displacement(value: str | None) -> list[dict[str, Any]]:
     """
     Parse engine displacement keeping ALL values with units preserved.
     
@@ -71,7 +71,7 @@ def parse_engine_displacement(value: Optional[str]) -> list[dict[str, Any]]:
     return [{"value": int(num), "unit": unit} for num in numbers]
 
 
-def parse_mileage(value: Optional[str]) -> dict[str, Any]:
+def parse_mileage(value: str | None) -> dict[str, Any]:
     """
     Parse mileage/efficiency values including ranges and EV formats.
     
@@ -125,7 +125,7 @@ def parse_mileage(value: Optional[str]) -> dict[str, Any]:
     return {}
 
 
-def parse_seating_capacity(value: Any) -> Optional[int]:
+def parse_seating_capacity(value: Any) -> int | None:
     """
     Extract integer from seating capacity value.
     
@@ -155,7 +155,7 @@ def parse_seating_capacity(value: Any) -> Optional[int]:
     return None
 
 
-def parse_rating(value: Any) -> Optional[float]:
+def parse_rating(value: Any) -> float | None:
     """
     Convert rating to float.
     
@@ -188,7 +188,7 @@ def parse_rating(value: Any) -> Optional[float]:
     return None
 
 
-def parse_dimension(value: Optional[str]) -> Optional[dict[str, Any]]:
+def parse_dimension(value: str | None) -> dict[str, Any] | None:
     """
     Parse dimension value preserving the unit.
     
@@ -221,7 +221,7 @@ def parse_dimension(value: Optional[str]) -> Optional[dict[str, Any]]:
     return None
 
 
-def parse_weight(value: Optional[str]) -> dict[str, int]:
+def parse_weight(value: str | None) -> dict[str, int]:
     """
     Parse weight value from formats like "1788/1788".
     
@@ -257,7 +257,7 @@ def parse_weight(value: Optional[str]) -> dict[str, int]:
     return {}
 
 
-def parse_power_torque(value: Optional[str]) -> list[dict]:
+def parse_power_torque(value: str | None) -> list[dict]:
     """
     Parse complex power/torque strings with multiple values.
     
@@ -302,7 +302,7 @@ def parse_power_torque(value: Optional[str]) -> list[dict]:
     return results
 
 
-def parse_multi_value_field(value: Optional[str], delimiter: str = ",") -> list[str]:
+def parse_multi_value_field(value: str | None, delimiter: str = ",") -> list[str]:
     """
     Split multi-value fields into list.
     
@@ -365,7 +365,7 @@ def normalize_fuel_type(fuel_types: list[str]) -> list[str]:
     return result
 
 
-def parse_number_of_doors(value: Any) -> Optional[int]:
+def parse_number_of_doors(value: Any) -> int | None:
     """
     Extract number of doors.
     
@@ -547,20 +547,6 @@ def preprocess_car_data(raw_data: dict, car_id: str) -> dict:
         if "number_of_doors" in raw_data["dimensions"]:
             dims["number_of_doors"] = parse_number_of_doors(raw_data["dimensions"]["number_of_doors"])
         
-        # Try to extract boot space and ground clearance from description if not present
-        if "basic_info" in processed and "description" in processed["basic_info"]:
-            desc = processed["basic_info"]["description"]
-            if desc:
-                # Boot Space
-                boot_match = re.search(r'Boot (?:capacity|space) of (\d+\s*[a-zA-Z]+)', desc, re.IGNORECASE)
-                if boot_match:
-                    dims["boot_space"] = parse_dimension(boot_match.group(1))
-                
-                # Ground Clearance
-                gc_match = re.search(r'Ground Clearance (?:measurement )?of (\d+\s*[a-zA-Z]+)', desc, re.IGNORECASE)
-                if gc_match:
-                    dims["ground_clearance"] = parse_dimension(gc_match.group(1))
-
         processed["dimensions"] = dims
     
     # Process price
@@ -589,50 +575,8 @@ def preprocess_car_data(raw_data: dict, car_id: str) -> dict:
     
     # Copy other fields as-is
     for key in ["colors", "reviewed_by", "pros", "cons", "verdict", 
-                "competitor_comparison", "mileage_details", "whats_new"]:
+                "competitor_comparison", "mileage_details", "whats_new", "review_videos"]:
         if key in raw_data:
             processed[key] = raw_data[key]
-            
-    # Process features (extract from various sources)
-    features = set()
-    
-    # 1. From scraped specs (if available, e.g. bikes)
-    if "scraped_specs" in raw_data:
-        for key, value in raw_data["scraped_specs"].items():
-            # Add interesting specs as features
-            key_lower = key.lower()
-            if any(k in key_lower for k in ["abs", "brake", "suspension", "wheel", "tyre", "console", "headlight", "taillight", "charging", "battery warranty"]):
-                features.add(f"{key}: {value}")
-                
-    # 2. Extract keywords from description/pros
-    text_to_scan = ""
-    if "basic_info" in processed and processed["basic_info"].get("description"):
-        text_to_scan += processed["basic_info"]["description"] + " "
-    if "pros" in processed and processed["pros"]:
-        text_to_scan += " ".join(processed["pros"]) + " "
-    if "expert_review" in raw_data:
-        for content in raw_data["expert_review"].values():
-            text_to_scan += content + " "
-            
-    # Keywords to look for
-    keywords = [
-        "Sunroof", "Moonroof", "Panoramic Sunroof",
-        "ADAS", "Adaptive Cruise Control", "Lane Keep Assist",
-        "Ventilated Seats", "Air Purifier", "Wireless Charger",
-        "360 Degree Camera", "Android Auto", "Apple CarPlay",
-        "Connected Car Tech", "Touchscreen", "Digital Instrument Cluster",
-        "LED Headlamps", "Projector Headlamps", "Fog Lamps",
-        "Alloy Wheels", "Diamond Cut Alloy Wheels",
-        "ABS", "EBD", "ESP", "Traction Control", "Hill Hold Control", "Hill Start Assist",
-        "6 Airbags", "ISOFIX",
-        "Fast Charging", "Regenerative Braking"
-    ]
-    
-    for keyword in keywords:
-        if re.search(r'\b' + re.escape(keyword) + r'\b', text_to_scan, re.IGNORECASE):
-            features.add(keyword)
-            
-    if features:
-        processed["features"] = sorted(list(features))
     
     return processed
